@@ -1,0 +1,32 @@
+name: clinical-trial-deviation-detector
+version: 1.0.0
+description: An OpenEnv environment simulating clinical trial monitoring for protocol deviations, where AI agents act as CRAs reviewing patient data and making compliance decisions.
+author: PyTorch Meta Hackathon Participant
+license: MIT
+tags:
+  - healthcare
+  - clinical-trials
+  - compliance
+  - pharma
+  - biotech
+observation_space:
+  type: dict
+  properties:
+    trial_status: object
+    patient_records: array
+    protocol: object
+    deviations_found: array
+action_space:
+  type: dict
+  properties:
+    flag_deviations: array
+    corrective_actions: array
+reward_range: [0.0, 1.0]
+max_episode_steps: 10
+tasks:
+  - name: easy
+    description: Small trial with clear deviations
+  - name: medium
+    description: Medium trial with subtle deviations
+  - name: hard
+    description: Large multi-site trial with complex deviations
