@@ -51,4 +51,4 @@ Run `python inference.py` with OpenAI API key set. Expected scores (approximate)
 - Hard: 0.3–0.5
 
 ## Deployment
-Deployed on Hugging Face Spaces at [your-space-url]. Containerized with Dockerfile, responds to reset() and step() calls.
+Deployed on Hugging Face Spaces at [https://huggingface.co/spaces/Esheshwari/clinical-trial-env]. Containerized with Dockerfile, responds to reset() and step() calls.
