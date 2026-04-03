@@ -128,7 +128,10 @@ class ClinicalTrialEnv:
         elif dev['type'] == 'late_lab':
             patient['labs']['CBC'] = 999  # invalid
         elif dev['type'] == 'unreported_ae':
-            patient['adverse_events'][0]['reported'] = False
+            if patient['adverse_events']:
+                patient['adverse_events'][0]['reported'] = False
+            else:
+                patient['adverse_events'].append({'type': 'Nausea', 'severity': 'Mild', 'reported': False})
         elif dev['type'] == 'data_fabrication':
             patient['labs']['LFTs'] = 0
 
