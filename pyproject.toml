@@ -17,4 +17,4 @@ version = "1.0.0"
 path = "./"
 
 [project.scripts]
-server = "uvicorn:run"
+server = "server.app:main"
