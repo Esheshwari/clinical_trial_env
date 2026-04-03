@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from environment import ClinicalTrialEnv, Action, Observation
+from pydantic import BaseModel
+from typing import Optional
+from environment import ClinicalTrialEnv, Action
 import uvicorn
 
 app = FastAPI(title="Clinical Trial Deviation Detector")
@@ -14,23 +16,31 @@ app.add_middleware(
 
 env = None
 
+class ResetRequest(BaseModel):
+    task: str = "easy"
+
+class StepRequest(BaseModel):
+    action: dict
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
 
 @app.post("/reset")
-def reset(task: str = "easy"):
+def reset(request: ResetRequest = ResetRequest()):
     global env
-    env = ClinicalTrialEnv(task=task)
+    env = ClinicalTrialEnv(task=request.task)
+    obs = env.reset()
+    return obs.dict()
     obs = env.reset()
     return obs.dict()
 
 @app.post("/step")
-def step(action: dict):
+def step(body: StepRequest):
     if env is None:
         return {"error": "Environment not initialized. Call /reset first."}
     try:
-        act = Action(**action)
+        act = Action(**body.action)
         obs, reward, done, info = env.step(act)
         return {
             "observation": obs.dict(),
