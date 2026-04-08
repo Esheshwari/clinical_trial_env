@@ -9,16 +9,15 @@ MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4")
 def run_inference(task: str):
     # Initialize OpenAI client with proper error handling
     api_key = os.getenv("OPENAI_API_KEY")
-    if not api_key:
-        raise ValueError(
-            "OPENAI_API_KEY environment variable is not set. "
-            "Please set it before running inference."
-        )
-    
-    try:
-        client = OpenAI(api_key=api_key, base_url=API_BASE_URL)
-    except Exception as e:
-        raise RuntimeError(f"Failed to initialize OpenAI client: {e}")
+    client = None
+    if api_key:
+        try:
+            client = OpenAI(api_key=api_key, base_url=API_BASE_URL)
+        except Exception as e:
+            print(f"Failed to initialize OpenAI client: {e}")
+            client = None
+    else:
+        print("OPENAI_API_KEY not set, using default actions")
     
     env = ClinicalTrialEnv(task=task)
     obs = env.reset()
@@ -41,16 +40,23 @@ Decide which patient indices have deviations (flag_deviations: list of ints) and
 
 Respond with JSON: {{"flag_deviations": [1,2], "corrective_actions": ["correct"]}}
 """
-        response = client.chat.completions.create(
-            model=MODEL_NAME,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=200
-        )
-        action_json = response.choices[0].message.content.strip()
-        try:
-            action_data = json.loads(action_json)
-            action = Action(**action_data)
-        except:
+        if client:
+            try:
+                response = client.chat.completions.create(
+                    model=MODEL_NAME,
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=200
+                )
+                action_json = response.choices[0].message.content.strip()
+                try:
+                    action_data = json.loads(action_json)
+                    action = Action(**action_data)
+                except:
+                    action = Action(flag_deviations=[], corrective_actions=[])
+            except Exception as e:
+                print(f"LLM call failed: {e}, using default action")
+                action = Action(flag_deviations=[], corrective_actions=[])
+        else:
             action = Action(flag_deviations=[], corrective_actions=[])
 
         obs, reward, done, info = env.step(action)
