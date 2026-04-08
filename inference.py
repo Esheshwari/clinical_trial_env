@@ -1,7 +1,7 @@
 import os
 import json
 from openai import OpenAI
-from environment import ClinicalTrialEnv, Action
+from environment import ClinicalTrialEnv, Action, grade_easy, grade_medium, grade_hard
 
 API_BASE_URL = os.environ["API_BASE_URL"]
 API_KEY = os.environ["API_KEY"]
@@ -29,7 +29,7 @@ def run_inference(task: str):
     env = ClinicalTrialEnv(task=task)
     obs = env.reset()
 
-    total_reward = 0.0
+    actions = []  # Collect actions for grading
     step_count = 0
 
     print(f"[START] {task}")
@@ -68,26 +68,30 @@ Return ONLY JSON:
 
         obs, reward, done, info = env.step(action)
 
-        # 🚨 CRITICAL FIX: overwrite reward.score itself
-        safe_score = clamp(float(reward.score))
-        reward.score = safe_score  # ✅ overwrite original
+        # Collect the action for grading
+        actions.append(action)
 
-        total_reward += safe_score
-
-        print(f"[STEP] {step_count} | SAFE SCORE: {safe_score}")
+        print(f"[STEP] {step_count} | Action: {action.dict()}")
 
         if done:
             break
 
-    if step_count == 0:
-        return EPSILON
+    # Use the appropriate grading function based on task
+    if task == "easy":
+        score = grade_easy(env, actions)
+    elif task == "medium":
+        score = grade_medium(env, actions)
+    elif task == "hard":
+        score = grade_hard(env, actions)
+    else:
+        score = EPSILON
 
-    avg = total_reward / step_count
-    avg = clamp(avg)
+    # Ensure score is strictly between 0 and 1
+    score = clamp(score)
 
-    print(f"[END] {task} → {avg}")
+    print(f"[END] {task} → {score}")
 
-    return avg
+    return score
 
 
 if __name__ == "__main__":
@@ -101,11 +105,6 @@ if __name__ == "__main__":
             print(f"{task} crashed: {e}")
             score = EPSILON
 
-        # 🚨 FINAL SAFETY
-        scores[task] = clamp(float(score))
-
-    # 🚨 EXTRA SAFETY (validator sometimes parses this)
-    for k in scores:
-        scores[k] = clamp(scores[k])
+        scores[task] = score
 
     print("Final Scores:", scores)
