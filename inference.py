@@ -3,15 +3,10 @@ import json
 from openai import OpenAI
 from environment import ClinicalTrialEnv, Action, grade_easy, grade_medium, grade_hard
 
-API_BASE_URL = os.environ["API_BASE_URL"]
-API_KEY = os.environ["API_KEY"]
-MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4")
-
 EPSILON = 1e-6
 
 
 def clamp(score):
-    """Force score strictly into (0,1)"""
     if score <= 0:
         return EPSILON
     if score >= 1:
@@ -19,31 +14,31 @@ def clamp(score):
     return score
 
 
+API_BASE_URL = os.environ["API_BASE_URL"]
+API_KEY = os.environ["API_KEY"]
+MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4")
+
+
 def run_inference(task: str):
     try:
         client = OpenAI(api_key=API_KEY, base_url=API_BASE_URL)
-    except Exception as e:
-        print(f"Client init failed: {e}")
+    except:
         return EPSILON
 
     env = ClinicalTrialEnv(task=task)
     obs = env.reset()
 
-    actions = []  # Collect actions for grading
+    rewards = []
     step_count = 0
-
-    print(f"[START] {task}")
 
     while True:
         step_count += 1
 
         prompt = f"""
-You are a Clinical Research Associate.
-
 Observation:
-{json.dumps(obs.dict(), indent=2)}
+{json.dumps(obs.dict())}
 
-Return ONLY JSON:
+Return JSON:
 {{"flag_deviations": [], "corrective_actions": []}}
 """
 
@@ -54,57 +49,37 @@ Return ONLY JSON:
                 max_tokens=200
             )
 
-            raw = response.choices[0].message.content.strip()
+            data = json.loads(response.choices[0].message.content.strip())
+            action = Action(**data)
 
-            try:
-                data = json.loads(raw)
-                action = Action(**data)
-            except:
-                action = Action(flag_deviations=[], corrective_actions=[])
-
-        except Exception as e:
-            print(f"LLM failed: {e}")
+        except:
             action = Action(flag_deviations=[], corrective_actions=[])
 
-        obs, reward, done, info = env.step(action)
+        obs, reward, done, _ = env.step(action)
 
-        # Collect the action for grading
-        actions.append(action)
-
-        print(f"[STEP] {step_count} | Action: {action.dict()}")
+        # 🔥 USE REWARD SCORES (NOT ACTIONS)
+        rewards.append(clamp(reward.score))
 
         if done:
             break
 
-    # Use the appropriate grading function based on task
     if task == "easy":
-        score = grade_easy(env, actions)
+        score = grade_easy(env, rewards)
     elif task == "medium":
-        score = grade_medium(env, actions)
-    elif task == "hard":
-        score = grade_hard(env, actions)
+        score = grade_medium(env, rewards)
     else:
-        score = EPSILON
+        score = grade_hard(env, rewards)
 
-    # Ensure score is strictly between 0 and 1
-    score = clamp(score)
-
-    print(f"[END] {task} → {score}")
-
-    return score
+    return clamp(score)
 
 
 if __name__ == "__main__":
-    tasks = ["easy", "medium", "hard"]
     scores = {}
 
-    for task in tasks:
+    for task in ["easy", "medium", "hard"]:
         try:
-            score = run_inference(task)
-        except Exception as e:
-            print(f"{task} crashed: {e}")
-            score = EPSILON
-
-        scores[task] = score
+            scores[task] = run_inference(task)
+        except:
+            scores[task] = EPSILON
 
     print("Final Scores:", scores)
