@@ -5,9 +5,21 @@ from environment import ClinicalTrialEnv, Action
 
 API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
 MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4")
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"), base_url=API_BASE_URL)
 
 def run_inference(task: str):
+    # Initialize OpenAI client with proper error handling
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        raise ValueError(
+            "OPENAI_API_KEY environment variable is not set. "
+            "Please set it before running inference."
+        )
+    
+    try:
+        client = OpenAI(api_key=api_key, base_url=API_BASE_URL)
+    except Exception as e:
+        raise RuntimeError(f"Failed to initialize OpenAI client: {e}")
+    
     env = ClinicalTrialEnv(task=task)
     obs = env.reset()
     actions = []
