@@ -32,8 +32,6 @@ def reset(request: ResetRequest = ResetRequest()):
     env = ClinicalTrialEnv(task=request.task)
     obs = env.reset()
     return obs.dict()
-    obs = env.reset()
-    return obs.dict()
 
 @app.post("/step")
 def step(body: StepRequest):

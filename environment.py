@@ -133,24 +133,18 @@ class ClinicalTrialEnv:
         return self.current_step >= self.max_steps
 
 
-# ✅ FIXED GRADERS (NOW USE REWARD LIST)
+# Graders for tasks
+def grade_easy(env: ClinicalTrialEnv, actions: List[Action]) -> float:
+    # Simple: score based on final reward
+    final_reward = sum(a.score for a in actions) / len(actions) if actions else 0
+    return min(1.0, max(0.0, final_reward))
 
-def safe_avg(scores):
-    if not scores:
-        return EPSILON
-    avg = sum(scores) / len(scores)
-    return clamp_score(avg)
+def grade_medium(env: ClinicalTrialEnv, actions: List[Action]) -> float:
+    # Medium: require higher accuracy
+    final_reward = sum(a.score for a in actions) / len(actions) if actions else 0
+    return min(1.0, max(0.0, final_reward * 1.2))
 
-
-def grade_easy(env, rewards):
-    return safe_avg(rewards)
-
-
-def grade_medium(env, rewards):
-    avg = safe_avg(rewards)
-    return clamp_score(min(0.8, avg * 1.2))
-
-
-def grade_hard(env, rewards):
-    avg = safe_avg(rewards)
-    return clamp_score(avg * 0.8)
+def grade_hard(env: ClinicalTrialEnv, actions: List[Action]) -> float:
+    # Hard: complex, lower score
+    final_reward = sum(a.score for a in actions) / len(actions) if actions else 0
+    return min(1.0, max(0.0, final_reward * 0.8))
