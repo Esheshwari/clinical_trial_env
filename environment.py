@@ -167,14 +167,19 @@ class ClinicalTrialEnv:
 def grade_easy(env: ClinicalTrialEnv, actions: List[Action]) -> float:
     # Simple: score based on final reward
     final_reward = sum(a.score for a in actions) / len(actions) if actions else 0
-    return min(1.0, max(0.0, final_reward))
+    # Ensure strictly between 0 and 1
+    return min(0.999, max(0.001, final_reward))
 
 def grade_medium(env: ClinicalTrialEnv, actions: List[Action]) -> float:
-    # Medium: require higher accuracy
+    # Medium: require higher accuracy, but cap at reasonable level
     final_reward = sum(a.score for a in actions) / len(actions) if actions else 0
-    return min(1.0, max(0.0, final_reward * 1.2))
+    adjusted_reward = min(0.8, final_reward * 1.2)  # Cap at 0.8 to leave room
+    # Ensure strictly between 0 and 1
+    return min(0.999, max(0.001, adjusted_reward))
 
 def grade_hard(env: ClinicalTrialEnv, actions: List[Action]) -> float:
     # Hard: complex, lower score
     final_reward = sum(a.score for a in actions) / len(actions) if actions else 0
-    return min(1.0, max(0.0, final_reward * 0.8))
+    adjusted_reward = final_reward * 0.8
+    # Ensure strictly between 0 and 1
+    return min(0.999, max(0.001, adjusted_reward))
